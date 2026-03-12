@@ -74,7 +74,7 @@ We use conda to manage the environment. Recommended versions:
 ```bash
 conda create -n spatial-ttt python=3.10 -y
 conda activate spatial-ttt
-pip install torch torchvision transformers deepspeed accelerate peft
+pip install torch torchvision deepspeed accelerate peft transformers==4.57.0
 pip install flash-attn --no-build-isolation
 pip install torchcodec
 ```
