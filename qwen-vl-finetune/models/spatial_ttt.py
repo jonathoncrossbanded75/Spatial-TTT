@@ -1,21 +1,15 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 
-import json
-import re
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Optional
 
 import torch
-import tyro
 from safetensors import safe_open
-from transformers import AutoProcessor, AutoTokenizer, Qwen3VLForConditionalGeneration
+from transformers import Qwen3VLForConditionalGeneration
 from transformers.cache_utils import DynamicCache
-from utils.general import fetch_videos
 
 from .causal_swa_lact import LaCTCache, Qwen3VLLaCTSWIGLULayer
-from .causal_swa_lact_streaming import Qwen3VLLaCTSWIGLULayerStreaming
 from .causal_swa_lact_streaming_chunked import (
     Qwen3VLLaCTSWIGLULayerStreamingChunked,
 )
@@ -59,9 +53,36 @@ def wrap_model_with_lact(
     return model
 
 
-class LaCTGenerationMixin:
+class SpatialTTTForConditionalGeneration:
+    def __init__(
+        self,
+        model: Qwen3VLForConditionalGeneration,
+    ):
+        self.model = model.model
+        self.lm_head = model.lm_head
+        self._model = model
+
+    def __getattr__(self, name):
+        if name in ("model", "lm_head", "_model"):
+            return object.__getattribute__(self, name)
+        return getattr(self._model, name)
+
+    def to(self, *args, **kwargs):
+        self._model = self._model.to(*args, **kwargs)
+        self.model = self._model.model
+        self.lm_head = self._model.lm_head
+        return self
+
+    def eval(self):
+        self._model.eval()
+        return self
+
+    def train(self, mode=True):
+        self._model.train(mode)
+        return self
+
     @torch.no_grad()
-    def generate_with_lact(
+    def generate_with_spatial_ttt(
         self,
         input_ids: torch.Tensor,
         pixel_values_videos: Optional[torch.Tensor] = None,
@@ -77,7 +98,9 @@ class LaCTGenerationMixin:
         pad_token_id: Optional[int] = None,
     ) -> torch.Tensor:
         batch_size = input_ids.shape[0]
-        assert batch_size == 1, "LaCT generation currently only supports batch_size=1"
+        assert batch_size == 1, (
+            "SpatialTTT generation currently only supports batch_size=1"
+        )
 
         device = input_ids.device
         qwen_model = self._model
@@ -163,7 +186,7 @@ class LaCTGenerationMixin:
 
             if isinstance(layer.self_attn, Qwen3VLLaCTSWIGLULayer) or isinstance(
                 layer.self_attn,
-                (Qwen3VLLaCTSWIGLULayerStreaming, Qwen3VLLaCTSWIGLULayerStreamingChunked),
+                Qwen3VLLaCTSWIGLULayerStreamingChunked,
             ):
                 hidden_states, _ = layer.self_attn(
                     hidden_states,
@@ -227,10 +250,7 @@ class LaCTGenerationMixin:
 
                 if isinstance(layer.self_attn, Qwen3VLLaCTSWIGLULayer) or isinstance(
                     layer.self_attn,
-                    (
-                        Qwen3VLLaCTSWIGLULayerStreaming,
-                        Qwen3VLLaCTSWIGLULayerStreamingChunked,
-                    ),
+                    Qwen3VLLaCTSWIGLULayerStreamingChunked,
                 ):
                     hidden_states, _ = layer.self_attn(
                         hidden_states,
@@ -313,37 +333,7 @@ class LaCTGenerationMixin:
         return next_token
 
 
-class Qwen3VLLaCTForConditionalGeneration(LaCTGenerationMixin):
-    def __init__(
-        self,
-        model: Qwen3VLForConditionalGeneration,
-    ):
-        self.model = model.model
-        self.lm_head = model.lm_head
-        self._model = model
-
-    def __getattr__(self, name):
-        # delegate to underlying model
-        if name in ("model", "lm_head", "_model"):
-            return object.__getattribute__(self, name)
-        return getattr(self._model, name)
-
-    def to(self, *args, **kwargs):
-        self._model = self._model.to(*args, **kwargs)
-        self.model = self._model.model
-        self.lm_head = self._model.lm_head
-        return self
-
-    def eval(self):
-        self._model.eval()
-        return self
-
-    def train(self, mode=True):
-        self._model.train(mode)
-        return self
-
-
-def load_lact_model(
+def load_spatial_ttt_model(
     model_path: str,
     num_lact_heads: int = 4,
     w0_w2_low_rank: int = 32,
@@ -356,7 +346,7 @@ def load_lact_model(
     device: Optional[str] = None,
     checkpoint_path: Optional[str] = None,
     **kwargs,
-) -> Qwen3VLLaCTForConditionalGeneration:
+) -> SpatialTTTForConditionalGeneration:
     # load base model
     model = Qwen3VLForConditionalGeneration.from_pretrained(
         model_path,
@@ -408,261 +398,6 @@ def load_lact_model(
         model = model.to("cuda")
 
     # convert to inference wrapper
-    lact_model = Qwen3VLLaCTForConditionalGeneration(model)
+    spatial_ttt_model = SpatialTTTForConditionalGeneration(model)
 
-    return lact_model
-
-
-def read_jsonl(path):
-    with open(path, "r") as f:
-        return [json.loads(line) for line in f]
-
-
-def load_dataset_samples(
-    annotation_path: str,
-    num_samples: int = 3,
-    shuffle: bool = True,
-    seed: int = 42,
-):
-    data = read_jsonl(annotation_path)
-
-    if shuffle:
-        import random
-
-        random.seed(seed)
-        random.shuffle(data)
-
-    return data[:num_samples]
-
-
-def build_messages_from_sample(sample: Dict, data_path: str = "") -> tuple:
-    base_path = Path(data_path) if data_path else Path("")
-
-    # Extract media
-    images = sample.get("image") or []
-    if isinstance(images, str):
-        images = [images]
-
-    videos = sample.get("video") or []
-    if isinstance(videos, str):
-        videos = [videos]
-
-    # Build media pools with absolute paths
-    def make_abs_path(p):
-        p = Path(p)
-        if p.is_absolute():
-            return str(p)
-        return str((base_path / p).resolve())
-
-    image_pool = [{"type": "image", "image": make_abs_path(img)} for img in images]
-    video_pool = [{"type": "video", "video": make_abs_path(vid)} for vid in videos]
-
-    messages = []
-    ground_truth = None
-
-    for turn in sample["conversations"]:
-        role = "user" if turn["from"] == "human" else "assistant"
-        text = turn["value"]
-
-        if role == "user":
-            content = []
-            # Split text by <image> or <video> placeholders
-            text_parts = re.split(r"(<image>|<video>)", text)
-
-            for seg in text_parts:
-                if seg == "<image>":
-                    if image_pool:
-                        content.append(image_pool.pop(0))
-                elif seg == "<video>":
-                    if video_pool:
-                        content.append(video_pool.pop(0))
-                elif seg.strip():
-                    content.append({"type": "text", "text": seg.strip()})
-
-            messages.append({"role": role, "content": content})
-        else:
-            # assistant message is the ground truth
-            ground_truth = text
-
-    return messages, ground_truth
-
-
-def run_inference_on_dataset(
-    model,
-    processor: AutoProcessor,
-    annotation_path: str,
-    num_samples: int = 3,
-    max_new_tokens: int = 128,
-    data_path: str = "",
-    device: str = "cuda",
-    use_native_generate: bool = False,
-    video_max_pixels: int = 1024 * 28 * 28,
-):
-    print(f"\n{'=' * 60}")
-    print(f"Running inference on {num_samples} samples from:")
-    print(f"  {annotation_path}")
-    print(f"video_max_pixels: {video_max_pixels}")
-    print(f"{'=' * 60}\n")
-
-    samples = load_dataset_samples(annotation_path, num_samples)
-
-    results = []
-
-    for idx, sample in enumerate(samples):
-        print(f"\n[Sample {idx + 1}/{num_samples}]")
-        print("-" * 40)
-
-        messages, ground_truth = build_messages_from_sample(sample, data_path)
-
-        # Print question (last user message)
-        user_content = messages[-1]["content"]
-        question_text = " ".join(
-            c["text"] for c in user_content if c.get("type") == "text"
-        )
-        print(f"Question: {question_text[:200]}...")
-        print(f"GT: {ground_truth}")
-        inputs = processor.apply_chat_template(
-            messages,
-            tokenize=True,
-            add_generation_prompt=True,
-            return_tensors="pt",
-            return_dict=True,
-        )
-
-        if "token_type_ids" in inputs:
-            inputs.pop("token_type_ids")
-
-        inputs = {
-            k: (v.to(device) if isinstance(v, torch.Tensor) else v)
-            for k, v in inputs.items()
-        }
-
-        if use_native_generate:
-            raw_model = model._model if hasattr(model, "_model") else model
-            with torch.no_grad():
-                output_ids = raw_model.generate(
-                    **inputs,
-                    max_new_tokens=max_new_tokens,
-                    do_sample=False,
-                )
-        else:
-            output_ids = model.generate_with_lact(
-                **inputs,
-                max_new_tokens=max_new_tokens,
-                do_sample=False,
-            )
-
-        input_len = inputs["input_ids"].shape[1]
-        generated_ids = output_ids[0, input_len:]
-        prediction = processor.tokenizer.decode(generated_ids, skip_special_tokens=True)
-
-        print(f"Pred: {prediction}")
-
-        results.append(
-            {
-                "question": question_text,
-                "ground_truth": ground_truth,
-                "prediction": prediction,
-                "match": prediction.strip() == ground_truth.strip(),
-            }
-        )
-
-    print(f"\n{'=' * 60}")
-    print("SUMMARY")
-    print(f"{'=' * 60}")
-    num_correct = sum(1 for r in results if r["match"])
-    print(
-        f"Exact match: {num_correct}/{len(results)} ({100 * num_correct / len(results):.1f}%)"
-    )
-
-    return results
-
-
-@dataclass
-class InferenceConfig:
-    model_path: str = (
-        "/mnt/public/wdk/proj/ECCV2026/qwenvl-lact/checkpoints/Spatial-2B-base"
-    )
-    checkpoint_path: Optional[str] = None
-    annotation_path: str = "/mnt/public/wdk/proj/ECCV2026/Spatial-Data/datasets/annotations/processed/sp-mllm-vlm3r-reweighted-70k.jsonl"
-    num_samples: int = 1
-    max_new_tokens: int = 1024
-    num_lact_heads: int = 4
-    w0_w2_low_rank: int = 128
-    lact_chunk_size: int = 2468
-    lact_layers: Optional[str] = None
-    window_size: int = 2468
-    # video_max_pixels: int = 1024 * 28 * 28
-    video_max_pixels: int = 9_871_400
-    use_conv_layer: bool = False
-    simple_test: bool = False
-
-
-def main(config: InferenceConfig):
-    print("=" * 60)
-    print("LaCT Inference Testing")
-    print("=" * 60)
-    print(f"Model path: {config.model_path}")
-    print(f"Checkpoint: {config.checkpoint_path or 'None (using base model)'}")
-    print(
-        f"LaCT config: heads={config.num_lact_heads}, low_rank={config.w0_w2_low_rank}"
-    )
-    print(
-        f"             chunk_size={config.lact_chunk_size}, window_size={config.window_size}"
-    )
-    print("=" * 60)
-
-    print("\nLoading model...")
-    model = load_lact_model(
-        config.model_path,
-        num_lact_heads=config.num_lact_heads,
-        w0_w2_low_rank=config.w0_w2_low_rank,
-        use_fused_kernel=False,
-        use_conv_layer=config.use_conv_layer,
-        lact_chunk_size=config.lact_chunk_size,
-        window_size=config.window_size,
-        lact_layers=config.lact_layers,
-        checkpoint_path=config.checkpoint_path,
-        device="cuda",
-    )
-    model.eval()
-
-    processor = AutoProcessor.from_pretrained(config.model_path)
-    type(processor.video_processor).fetch_videos = fetch_videos
-
-    if config.simple_test:
-        # simple text generation test
-        tokenizer = AutoTokenizer.from_pretrained(config.model_path)
-        prompt = "Introduce yourself!"
-        input_ids = tokenizer(prompt, return_tensors="pt").input_ids.to("cuda")
-
-        print(f"\nIn: {prompt}")
-        print("Generating...")
-
-        output_ids = model.generate_with_lact(
-            input_ids,
-            max_new_tokens=50,
-            do_sample=True,
-            temperature=0.7,
-            top_p=0.9,
-        )
-
-        output_text = tokenizer.decode(output_ids[0], skip_special_tokens=True)
-        print(f"Output: {output_text}")
-    else:
-        # dataset inference test
-        run_inference_on_dataset(
-            model=model,
-            processor=processor,
-            annotation_path=config.annotation_path,
-            num_samples=config.num_samples,
-            max_new_tokens=config.max_new_tokens,
-            device="cuda",
-            use_native_generate=False,
-            video_max_pixels=config.video_max_pixels,
-        )
-
-
-if __name__ == "__main__":
-    config = tyro.cli(InferenceConfig)
-    main(config)
+    return spatial_ttt_model

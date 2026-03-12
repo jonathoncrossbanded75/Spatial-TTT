@@ -18,7 +18,7 @@ resize_width=${7:-480}
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 cd "${script_dir}/../lmms-eval" || exit 1
 
-MODEL="qwen3_vl_spatial_ttt"
+MODEL="spatial_ttt"
 PRETRAINED="${PRETRAINED:-Qwen/Qwen3-VL-2B-Instruct}"
 frame_count=128
 

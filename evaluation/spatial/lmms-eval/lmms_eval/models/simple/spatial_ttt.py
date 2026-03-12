@@ -1,4 +1,3 @@
-import copy
 import sys
 from pathlib import Path
 
@@ -36,11 +35,11 @@ except ImportError:
         "Failed to import qwen_vl_utils; Please install it via `pip install qwen-vl-utils`"
     )
 
-from models.lact_inference import load_lact_model
+from models.spatial_ttt import load_spatial_ttt_model
 
 
-@register_model("qwen3_vl_lact_vsc")
-class Qwen3_VL_LaCT_VSC(lmms):
+@register_model("spatial_ttt")
+class SpatialTTT(lmms):
     """
     Qwen3_VL Model
     "https://huggingface.co/Qwen/Qwen3-VL-4B-Instruct"
@@ -67,7 +66,6 @@ class Qwen3_VL_LaCT_VSC(lmms):
         resize_height: int = 480,
         resize_width: int = 640,
         max_num_frames: int = 32,
-        video_chunk_size: int = 600,
         use_custom_video_loader: Optional[bool] = False,
         fps: Optional[
             float
@@ -132,8 +130,8 @@ class Qwen3_VL_LaCT_VSC(lmms):
         if attn_implementation is not None:
             model_kwargs["attn_implementation"] = attn_implementation
 
-        # load the model with LaCT
-        self._model = load_lact_model(
+        # load the model with SpatialTTT
+        self._model = load_spatial_ttt_model(
             model_path=pretrained,
             num_lact_heads=num_lact_heads,
             w0_w2_low_rank=w0_w2_low_rank,
@@ -149,7 +147,6 @@ class Qwen3_VL_LaCT_VSC(lmms):
         self.max_pixels = max_pixels
         self.min_pixels = min_pixels
         self.max_num_frames = max_num_frames
-        self.video_chunk_size = video_chunk_size
 
         if reasoning_prompt:
             self.reasoning_prompt = reasoning_prompt.replace("\\n", "\n")
@@ -240,131 +237,6 @@ class Qwen3_VL_LaCT_VSC(lmms):
             for j in i:
                 new_list.append(j)
         return new_list
-
-    def _num_video_frames(self, video) -> int:
-        if hasattr(video, "shape"):
-            return int(video.shape[0])
-        return len(video)
-
-    def _split_video_with_metadata(self, video, metadata, chunk_size: int):
-        total_frames = self._num_video_frames(video)
-        if total_frames <= chunk_size:
-            return [(video, metadata)]
-
-        chunks = []
-        for start in range(0, total_frames, chunk_size):
-            end = min(start + chunk_size, total_frames)
-            chunk_video = video[start:end]
-            chunk_metadata = None
-            if metadata is not None:
-                if isinstance(metadata, dict):
-                    chunk_metadata = metadata.copy()
-                    frames_indices = chunk_metadata.get("frames_indices")
-                else:
-                    chunk_metadata = copy.copy(metadata)
-                    frames_indices = getattr(chunk_metadata, "frames_indices", None)
-
-                if frames_indices is not None:
-                    if isinstance(frames_indices, torch.Tensor):
-                        frames_indices = frames_indices.tolist()
-                    elif not isinstance(frames_indices, list):
-                        frames_indices = list(frames_indices)
-                    frames_indices = frames_indices[start:end]
-                    if isinstance(chunk_metadata, dict):
-                        chunk_metadata["frames_indices"] = frames_indices
-                    else:
-                        setattr(chunk_metadata, "frames_indices", frames_indices)
-
-            chunks.append((chunk_video, chunk_metadata))
-        return chunks
-
-    def _extract_numeric_value(self, text: str) -> Optional[float]:
-        if text is None:
-            return None
-        cleaned = text.replace(",", "")
-        matches = re.findall(r"-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?", cleaned)
-        if not matches:
-            return None
-        try:
-            return float(matches[-1])
-        except ValueError:
-            return None
-
-    def _format_numeric_sum(self, value: float) -> str:
-        if abs(value - round(value)) < 1e-6:
-            return str(int(round(value)))
-        return str(value)
-
-    def _run_generation(
-        self,
-        texts: List[str],
-        image_inputs,
-        video_inputs,
-        video_metadatas,
-        video_kwargs,
-        current_gen_kwargs,
-        until: List[str],
-    ):
-        if self.batch_size > 1 and len(texts) > 1:
-            inputs = self.processor(
-                text=texts,
-                images=image_inputs,
-                videos=video_inputs,
-                video_metadatas=video_metadatas,
-                do_resize=False,
-                padding=True,
-                padding_side="left",
-                return_tensors="pt",
-                **video_kwargs,
-            )
-        else:
-            inputs = self.processor(
-                text=texts,
-                images=image_inputs,
-                videos=video_inputs,
-                video_metadatas=video_metadatas,
-                do_resize=False,
-                return_tensors="pt",
-                **video_kwargs,
-            )
-
-        if self.device_map == "auto":
-            inputs = inputs.to("cuda")
-        else:
-            inputs = inputs.to(self.device)
-
-        if "pixel_values_videos" in inputs:
-            eval_logger.debug(
-                f"inputs['pixel_values_videos'].shape: {inputs['pixel_values_videos'].shape}"
-            )
-
-        cont = self.model.generate_with_lact(
-            inputs["input_ids"],
-            pixel_values_videos=inputs.get("pixel_values_videos", None),
-            video_grid_thw=inputs.get("video_grid_thw", None),
-            pixel_values=inputs.get("pixel_values", None),
-            image_grid_thw=inputs.get("image_grid_thw", None),
-            max_new_tokens=current_gen_kwargs["max_new_tokens"],
-            do_sample=False,
-            eos_token_id=self.eot_token_id,
-        )
-
-        generated_ids_trimmed = [
-            out_ids[len(in_ids) :]
-            for in_ids, out_ids in zip(inputs.input_ids, cont)
-        ]
-        answers = self.processor.batch_decode(
-            generated_ids_trimmed,
-            skip_special_tokens=True,
-            clean_up_tokenization_spaces=False,
-        )
-        for i, ans in enumerate(answers):
-            for term in until:
-                if len(term) > 0:
-                    ans = ans.split(term)[0]
-            answers[i] = ans
-
-        return answers
 
     def generate_until(self, requests: List[Instance]) -> List[str]:
         res = []
@@ -460,9 +332,16 @@ class Qwen3_VL_LaCT_VSC(lmms):
                                         "video": visual,
                                         "resized_height": self.resize_height,
                                         "resized_width": self.resize_width,
-                                        "nframes": self.max_num_frames,
+                                        "fps": self.fps,
+                                        "max_frames": self.max_num_frames,
                                     }
                                 )
+                #
+                # import torch.distributed as dist
+                #
+                # if dist.get_rank() == 0:
+                #     breakpoint()
+                # dist.barrier()
 
                 # temporal fix; super hacky
                 context = (
@@ -533,6 +412,38 @@ class Qwen3_VL_LaCT_VSC(lmms):
                 f"video_inputs.shape: {None if video_inputs is None else [v.shape for v in video_inputs]}"
             )
 
+            if self.batch_size > 1:
+                inputs = self.processor(
+                    text=texts,
+                    images=image_inputs,
+                    videos=video_inputs,
+                    video_metadatas=video_metadatas,
+                    do_resize=False,
+                    padding=True,
+                    padding_side="left",
+                    return_tensors="pt",
+                    **video_kwargs,
+                )
+            else:
+                inputs = self.processor(
+                    text=texts,
+                    images=image_inputs,
+                    videos=video_inputs,
+                    video_metadatas=video_metadatas,
+                    do_resize=False,
+                    return_tensors="pt",
+                    **video_kwargs,
+                )
+
+            if self.device_map == "auto":
+                inputs = inputs.to("cuda")
+            else:
+                inputs = inputs.to(self.device)
+
+            eval_logger.debug(
+                f"inputs['pixel_values_videos'].shape: {inputs['pixel_values_videos'].shape}"
+            )
+
             # Set default generation kwargs
             default_gen_kwargs = {
                 "max_new_tokens": 128,
@@ -551,203 +462,43 @@ class Qwen3_VL_LaCT_VSC(lmms):
                 current_gen_kwargs["temperature"] = None
                 current_gen_kwargs["top_p"] = None
 
-            needs_chunking = False
-            if video_inputs is not None:
-                needs_chunking = any(
-                    self._num_video_frames(video) > self.video_chunk_size
-                    for video in video_inputs
+            cont = self.model.generate_with_spatial_ttt(
+                inputs["input_ids"],
+                pixel_values_videos=inputs.get("pixel_values_videos", None),
+                video_grid_thw=inputs.get("video_grid_thw", None),
+                pixel_values=inputs.get("pixel_values", None),
+                image_grid_thw=inputs.get("image_grid_thw", None),
+                max_new_tokens=current_gen_kwargs["max_new_tokens"],
+                do_sample=False,
+                eos_token_id=self.eot_token_id,
+            )
+
+            generated_ids_trimmed = [
+                out_ids[len(in_ids) :]
+                for in_ids, out_ids in zip(inputs.input_ids, cont)
+            ]
+            answers = self.processor.batch_decode(
+                generated_ids_trimmed,
+                skip_special_tokens=True,
+                clean_up_tokenization_spaces=False,
+            )
+            for i, ans in enumerate(answers):
+                for term in until:
+                    if len(term) > 0:
+                        ans = ans.split(term)[0]
+                answers[i] = ans
+
+            for ans, context in zip(answers, contexts):
+                clean_ans = parse_reasoning_model_answer(ans)
+                res.append(clean_ans)
+                self.cache_hook.add_partial(
+                    "generate_until", (context, gen_kwargs), clean_ans
                 )
+                pbar.update(1)
 
-            if not needs_chunking:
-                answers = self._run_generation(
-                    texts,
-                    image_inputs,
-                    video_inputs,
-                    video_metadatas,
-                    video_kwargs,
-                    current_gen_kwargs,
-                    until,
-                )
-                for ans, context in zip(answers, contexts):
-                    clean_ans = parse_reasoning_model_answer(ans)
-                    res.append(clean_ans)
-                    self.cache_hook.add_partial(
-                        "generate_until", (context, gen_kwargs), clean_ans
-                    )
-                    pbar.update(1)
-
-                    eval_logger.debug(f"Question: {context}")
-                    eval_logger.debug(f"Model Raw Response: {ans}")
-                    eval_logger.debug(f"Model Clean Response: {clean_ans}")
-            else:
-                def _count_media(conversation):
-                    image_count = 0
-                    video_count = 0
-                    for message in conversation:
-                        content = message.get("content")
-                        if isinstance(content, list):
-                            for ele in content:
-                                if not isinstance(ele, dict):
-                                    continue
-                                if ele.get("type") == "video" or "video" in ele:
-                                    video_count += 1
-                                if (
-                                    ele.get("type") in ("image", "image_url")
-                                    or "image" in ele
-                                    or "image_url" in ele
-                                ):
-                                    image_count += 1
-                    return image_count, video_count
-
-                image_offset = 0
-                video_offset = 0
-                per_sample_images = []
-                per_sample_videos = []
-                per_sample_video_metadatas = []
-                for conversation in batched_messages:
-                    image_count, video_count = _count_media(conversation)
-                    if image_inputs is None or image_count == 0:
-                        per_sample_images.append(None)
-                    else:
-                        per_sample_images.append(
-                            image_inputs[image_offset : image_offset + image_count]
-                        )
-                        image_offset += image_count
-
-                    if video_inputs is None or video_count == 0:
-                        per_sample_videos.append(None)
-                        per_sample_video_metadatas.append(None)
-                    else:
-                        per_sample_videos.append(
-                            video_inputs[video_offset : video_offset + video_count]
-                        )
-                        if video_metadatas is None:
-                            per_sample_video_metadatas.append(None)
-                        else:
-                            per_sample_video_metadatas.append(
-                                video_metadatas[
-                                    video_offset : video_offset + video_count
-                                ]
-                            )
-                        video_offset += video_count
-
-                for idx, (context, text) in enumerate(zip(contexts, texts)):
-                    sample_images = per_sample_images[idx]
-                    sample_videos = per_sample_videos[idx]
-                    sample_video_metadatas = per_sample_video_metadatas[idx]
-
-                    if not sample_videos:
-                        answers = self._run_generation(
-                            [text],
-                            sample_images,
-                            None,
-                            None,
-                            video_kwargs,
-                            current_gen_kwargs,
-                            until,
-                        )
-                        ans = answers[0]
-                        clean_ans = parse_reasoning_model_answer(ans)
-                        res.append(clean_ans)
-                        self.cache_hook.add_partial(
-                            "generate_until", (context, gen_kwargs), clean_ans
-                        )
-                        pbar.update(1)
-
-                        eval_logger.debug(f"Question: {context}")
-                        eval_logger.debug(f"Model Raw Response: {ans}")
-                        eval_logger.debug(f"Model Clean Response: {clean_ans}")
-                        continue
-
-                    if len(sample_videos) != 1:
-                        raise ValueError(
-                            "Video chunking expects exactly one video per sample."
-                        )
-
-                    sample_video = sample_videos[0]
-                    sample_metadata = (
-                        sample_video_metadatas[0]
-                        if sample_video_metadatas is not None
-                        else None
-                    )
-                    if self._num_video_frames(sample_video) > self.video_chunk_size:
-                        chunks = self._split_video_with_metadata(
-                            sample_video,
-                            sample_metadata,
-                            self.video_chunk_size,
-                        )
-                        numeric_sum = 0.0
-                        had_non_numeric = False
-                        for chunk_idx, (chunk_video, chunk_metadata) in enumerate(chunks):
-                            chunk_metadatas = (
-                                [chunk_metadata] if chunk_metadata is not None else None
-                            )
-                            answers = self._run_generation(
-                                [text],
-                                sample_images,
-                                [chunk_video],
-                                chunk_metadatas,
-                                video_kwargs,
-                                current_gen_kwargs,
-                                until,
-                            )
-                            chunk_ans = answers[0]
-                            chunk_clean = parse_reasoning_model_answer(chunk_ans)
-                            value = self._extract_numeric_value(chunk_clean)
-                            if value is None:
-                                had_non_numeric = True
-                                value = 0.0
-                                eval_logger.warning(
-                                    "Non-numeric chunk answer encountered; treating as 0 for summation."
-                                )
-                            numeric_sum += value
-
-                            eval_logger.debug(
-                                f"Chunk {chunk_idx + 1}/{len(chunks)} Raw Response: {chunk_ans}"
-                            )
-                            eval_logger.debug(
-                                f"Chunk {chunk_idx + 1}/{len(chunks)} Clean Response: {chunk_clean}"
-                            )
-
-                        final_ans = self._format_numeric_sum(numeric_sum)
-                        if had_non_numeric:
-                            eval_logger.warning(
-                                "One or more chunk answers were non-numeric; summed value may be underestimated."
-                            )
-                        res.append(final_ans)
-                        self.cache_hook.add_partial(
-                            "generate_until", (context, gen_kwargs), final_ans
-                        )
-                        pbar.update(1)
-
-                        eval_logger.debug(f"Question: {context}")
-                        eval_logger.debug(
-                            f"Model Summed Response ({len(chunks)} chunks): {final_ans}"
-                        )
-                    else:
-                        sample_metadatas = (
-                            [sample_metadata] if sample_metadata is not None else None
-                        )
-                        answers = self._run_generation(
-                            [text],
-                            sample_images,
-                            [sample_video],
-                            sample_metadatas,
-                            video_kwargs,
-                            current_gen_kwargs,
-                            until,
-                        )
-                        ans = answers[0]
-                        clean_ans = parse_reasoning_model_answer(ans)
-                        res.append(clean_ans)
-                        self.cache_hook.add_partial(
-                            "generate_until", (context, gen_kwargs), clean_ans
-                        )
-                        pbar.update(1)
-
-                        eval_logger.debug(f"Question: {context}")
-                        eval_logger.debug(f"Model Raw Response: {ans}")
-                        eval_logger.debug(f"Model Clean Response: {clean_ans}")
+                eval_logger.debug(f"Question: {context}")
+                eval_logger.debug(f"Model Raw Response: {ans}")
+                eval_logger.debug(f"Model Clean Response: {clean_ans}")
             # reorder this group of results back to original unsorted form
         res = re_ords.get_original(res)
 

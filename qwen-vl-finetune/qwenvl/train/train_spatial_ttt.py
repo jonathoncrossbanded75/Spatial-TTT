@@ -80,7 +80,7 @@ DEFAULT_LACT_CONFIG = {
 
 
 @dataclass
-class LaCTArguments:
+class SpatialTTTArguments:
     lact_enable: bool = True
     num_lact_heads: int = 4
     inter_multi: float = 1.0
@@ -603,7 +603,7 @@ def qwen3vl_forward(
 
 def wrap_model_with_lact(model, lact_args):
     if not lact_args.lact_enable:
-        rank0_print("LaCT is disabled, using standard attention")
+        rank0_print("SpatialTTT is disabled, using standard attention")
         return model
 
     # parse layer indices if specified
@@ -625,7 +625,7 @@ def wrap_model_with_lact(model, lact_args):
     num_layers = len(layers)
     rank0_print(f"Found {num_layers} decoder layers")
 
-    # wrap each attention layer with LaCT
+    # wrap each attention layer with SpatialTTT
     wrapped_count = 0
     for layer_idx, layer in enumerate(layers):
         if lact_layer_indices is not None and layer_idx not in lact_layer_indices:
@@ -658,9 +658,9 @@ def wrap_model_with_lact(model, lact_args):
 
         layer.self_attn = lact_layer
         wrapped_count += 1
-        rank0_print(f"Wrapped layer {layer_idx} with LaCT")
+        rank0_print(f"Wrapped layer {layer_idx} with SpatialTTT")
 
-    rank0_print(f"Wrapped {wrapped_count} layers with LaCT")
+    rank0_print(f"Wrapped {wrapped_count} layers with SpatialTTT")
     return model
 
 
@@ -792,15 +792,17 @@ def print_lact_parameters(model):
     print(
         f"Trainable parameters: {trainable_params:,} ({100 * trainable_params / total_params:.2f}%)"
     )
-    print(f"LaCT parameters: {lact_params:,} ({100 * lact_params / total_params:.2f}%)")
-    print(f"LaCT trainable parameters: {lact_trainable_params:,}")
+    print(
+        f"SpatialTTT parameters: {lact_params:,} ({100 * lact_params / total_params:.2f}%)"
+    )
+    print(f"SpatialTTT trainable parameters: {lact_trainable_params:,}")
 
 
 def train(attn_implementation="flash_attention_2"):
     global local_rank
 
     parser = transformers.HfArgumentParser(
-        (ModelArguments, DataArguments, TrainingArguments, LaCTArguments)
+        (ModelArguments, DataArguments, TrainingArguments, SpatialTTTArguments)
     )
     model_args, data_args, training_args, lact_args = (
         parser.parse_args_into_dataclasses()
@@ -937,9 +939,9 @@ def train(attn_implementation="flash_attention_2"):
     # type(processor.video_processor).fetch_videos = fetch_videos
 
     if lact_args.lact_enable:
-        rank0_print("Wrapping model with LaCT layers...")
+        rank0_print("Wrapping model with SpatialTTT layers...")
         rank0_print(
-            f"LaCT config: num_heads={lact_args.num_lact_heads}, "
+            f"SpatialTTT config: num_heads={lact_args.num_lact_heads}, "
             f"chunk_size={lact_args.lact_chunk_size}, "
             f"window_size={lact_args.window_size}, "
             f"use_muon={lact_args.use_muon}, "
@@ -1084,7 +1086,9 @@ def train(attn_implementation="flash_attention_2"):
     type(trainer)._save = _save_func
 
     if lact_args.lact_enable and lact_args.lact_lr is not None:
-        trainer.create_optimizer = lambda: create_lact_optimizer(trainer, lact_args)
+        trainer.create_optimizer = lambda: create_lact_optimizer(
+            trainer, lact_args
+        )
 
     if list(pathlib.Path(training_args.output_dir).glob("checkpoint-*")):
         logging.info("Checkpoint found, resuming training")

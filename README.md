@@ -77,6 +77,7 @@ conda activate spatial-ttt
 pip install torch torchvision deepspeed accelerate peft transformers==4.57.0
 pip install flash-attn --no-build-isolation
 pip install torchcodec
+pip install qwen-vl-utils
 ```
 
 Configure the dataset in `qwen-vl-finetune/qwenvl/data/__init__.py`: set `annotation_path` and `data_path` for **Spatial-TTT-Data-97k** (download from [THU-SI/Spatial-TTT-Data-97k](https://huggingface.co/datasets/THU-SI/Spatial-TTT-Data-97k) on Hugging Face).
@@ -140,7 +141,7 @@ Spatial-TTT/
 │   ├── qwenvl/
 │   │   ├── train/              # train_spatial_ttt.py, trainer, arguments
 │   │   └── data/               # Dataset configs and data processor
-│   ├── models/                 # LaCT/TTT layers (causal_swa_lact, lact_inference)
+│   ├── models/                 # LaCT/TTT layers (causal_swa_lact, spatial_ttt)
 │   └── scripts/                # DeepSpeed configs (e.g. zero2.json)
 ├── evaluation/spatial/         # VSI-Bench evaluation scripts
 └── README.md

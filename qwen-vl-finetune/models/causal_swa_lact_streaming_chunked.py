@@ -14,12 +14,14 @@ from .causal_swa_lact import (
     FLASH_ATTN_AVAILABLE,
     LaCTCache,
     LaCTLayerState,
+    Qwen3VLLaCTSWIGLULayer,
+    apply_partial_rotary_pos_emb,
     apply_rotary_pos_emb,
     flash_attn_varlen_func,
+    l2_norm,
     silu_backprop,
     zeropower_via_newtonschulz5,
 )
-from .causal_swa_lact_streaming import Qwen3VLLaCTSWIGLULayerStreaming
 
 
 @dataclass
@@ -33,7 +35,7 @@ class _VideoIndex:
     w: int
 
 
-class Qwen3VLLaCTSWIGLULayerStreamingChunked(Qwen3VLLaCTSWIGLULayerStreaming):
+class Qwen3VLLaCTSWIGLULayerStreamingChunked(Qwen3VLLaCTSWIGLULayer):
     """
     Streaming-prefill variant with chunked attention and conv-aware frame caching.
     """
@@ -73,6 +75,34 @@ class Qwen3VLLaCTSWIGLULayerStreamingChunked(Qwen3VLLaCTSWIGLULayerStreaming):
 
         q_flat, k_flat = self._rescale_qk(q_flat, k_flat)
         return q_normed, k_normed, v, q_flat, k_flat, v_expanded
+
+    def _prepare_fast_qkv(
+        self,
+        q_chunk: torch.Tensor,
+        k_chunk: torch.Tensor,
+        v_chunk: torch.Tensor,
+        cos: torch.Tensor,
+        sin: torch.Tensor,
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        fast_q = rearrange(q_chunk, "b s (h d) -> (b h) s d", h=self.num_fw_heads)
+        fast_k = rearrange(k_chunk, "b s (h d) -> (b h) s d", h=self.num_fw_heads)
+        fast_v = rearrange(v_chunk, "b s (h d) -> (b h) s d", h=self.num_fw_heads)
+
+        if self.qkv_silu:
+            fast_q = F.silu(fast_q)
+            fast_k = F.silu(fast_k)
+            if not self.no_v_silu:
+                fast_v = F.silu(fast_v)
+
+        fast_q = l2_norm(fast_q)
+        fast_k = l2_norm(fast_k)
+
+        if not self.ttt_nope:
+            fast_q, fast_k = apply_partial_rotary_pos_emb(
+                fast_q, fast_k, cos, sin, rope_dim=self.head_dim
+            )
+
+        return fast_q, fast_k, fast_v
 
     def _build_chunk_ranges(
         self,
@@ -779,3 +809,40 @@ class Qwen3VLLaCTSWIGLULayerStreamingChunked(Qwen3VLLaCTSWIGLULayerStreaming):
                 cache.values = cache.values[:, :, -self.window_size :, :]
 
         return output, None
+
+    def forward(
+        self,
+        hidden_states: torch.Tensor,
+        position_embeddings: Tuple[torch.Tensor, torch.Tensor],
+        attention_mask: Optional[torch.Tensor] = None,
+        past_key_values=None,
+        cache_position: Optional[torch.LongTensor] = None,
+        lact_cache: Optional[LaCTCache] = None,
+        **kwargs,
+    ) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
+        seq_len = hidden_states.shape[1]
+
+        if (
+            lact_cache is not None
+            and not lact_cache.has_layer(self.layer_idx)
+            and seq_len > 1
+        ):
+            return self._forward_prefill_streaming(
+                hidden_states,
+                position_embeddings,
+                attention_mask,
+                past_key_values,
+                cache_position,
+                lact_cache,
+                **kwargs,
+            )
+
+        return super().forward(
+            hidden_states,
+            position_embeddings,
+            attention_mask=attention_mask,
+            past_key_values=past_key_values,
+            cache_position=cache_position,
+            lact_cache=lact_cache,
+            **kwargs,
+        )
