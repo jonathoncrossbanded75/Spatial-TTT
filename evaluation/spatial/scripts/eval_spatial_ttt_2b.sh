@@ -52,3 +52,4 @@ accelerate launch --main_process_port 29502 --num_processes=$nprocs -m lmms_eval
     --log_samples \
     --output_path "${OUTPUT_DIR}" \
     --verbosity DEBUG 2>&1 | tee "${OUTPUT_DIR}/log.txt"
+

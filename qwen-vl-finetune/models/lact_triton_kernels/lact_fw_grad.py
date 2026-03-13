@@ -304,3 +304,4 @@ def reference_lact_swiglu_ffn_fast_weight_grads(W0_W2, W1, K, V, lr0, lr1, lr2):
     DW1 = torch.bmm(V.transpose(1, 2), Hidden_with_lr1.transpose(1, 2))
 
     return DW0_DW2, DW1
+

@@ -35,3 +35,4 @@ if __name__ == "__main__":
     configs = data_list(["spatial_ttt_data_97k"])
     for c in configs:
         print(c)
+

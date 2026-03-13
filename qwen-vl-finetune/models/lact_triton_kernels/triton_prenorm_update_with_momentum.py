@@ -525,3 +525,4 @@ def test_correctness_of_prenorm_update_with_momentum_and_l2_norm():
 
 if __name__ == "__main__":
     test_correctness_of_prenorm_update_with_momentum_and_l2_norm()
+

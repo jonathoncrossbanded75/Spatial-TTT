@@ -305,3 +305,4 @@ def prenorm_block_causal_lact_swiglu_fused_kernel_triton(
     output = rearrange(output, "n b c d -> b (n c) d")
 
     return output[:, :q_original_length]
+

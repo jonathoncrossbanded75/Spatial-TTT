@@ -1177,3 +1177,4 @@ class Qwen3VLLaCTSWIGLULayer(nn.Module):
         output = self.attn_layer.o_proj(output)
 
         return output, attn_weights
+

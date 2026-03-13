@@ -401,3 +401,4 @@ def load_spatial_ttt_model(
     spatial_ttt_model = SpatialTTTForConditionalGeneration(model)
 
     return spatial_ttt_model
+

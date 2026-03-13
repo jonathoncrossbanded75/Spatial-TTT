@@ -362,3 +362,4 @@ def prenorm_block_causal_lact_swiglu(
     output[:, :, s_index:e_index] = torch.bmm(w1, gate * h)
 
     return output.transpose(1, 2)
+

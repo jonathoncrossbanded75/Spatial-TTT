@@ -400,3 +400,4 @@ def check_correctness(B=2, M=256, N=192, K=320, dtype=torch.bfloat16, device="cu
 
 if __name__ == "__main__":
     check_correctness()
+

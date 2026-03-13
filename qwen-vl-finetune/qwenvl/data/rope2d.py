@@ -524,3 +524,4 @@ def get_rope_index_2(
             )
 
         return position_ids, mrope_position_deltas
+

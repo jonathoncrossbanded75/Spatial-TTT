@@ -152,3 +152,4 @@ def preprocess_video(
     grid_thw = torch.tensor([[grid_t, grid_h, grid_w]])
 
     return flatten_patches, grid_thw
+

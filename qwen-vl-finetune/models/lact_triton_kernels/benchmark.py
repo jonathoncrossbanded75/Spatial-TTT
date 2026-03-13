@@ -36,3 +36,4 @@ def report_error(ref, ours, name=""):
         f"{name} - Mean Ours Signal Magnitude: {mean_abs_ours}, Max Ours Signal Magnitude: {max_abs_ours}"
     )
     print("--------------------------------")
+

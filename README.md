@@ -20,7 +20,7 @@
     <sup>1</sup>Tsinghua University &emsp; <sup>2</sup>Tencent Hunyuan &emsp; <sup>3</sup>NTU
 </p>
 
-<a href='https://arxiv.org/abs/XXXX.XXXXX'><img src='https://img.shields.io/badge/arXiv-XXXX.XXXXX-b31b1b.svg'></a> &nbsp;&nbsp;&nbsp;&nbsp;
+<a href='https://arxiv.org/abs/2603.12255'><img src='https://img.shields.io/badge/arXiv-2603.12255-b31b1b.svg'></a> &nbsp;&nbsp;&nbsp;&nbsp;
 <a href='https://liuff19.github.io/Spatial-TTT/'><img src='https://img.shields.io/badge/Project-Page-Green'></a> &nbsp;&nbsp;&nbsp;&nbsp;
 <a><img src='https://img.shields.io/badge/License-MIT-blue'></a> &nbsp;&nbsp;&nbsp;&nbsp;
 
@@ -34,7 +34,8 @@
 
 ## 📢 News
 
-- **[Date]** We release the training and evaluation code for **Spatial-TTT**, the official implementation of *Spatial-TTT: Streaming Visual-based Spatial Intelligence with Test-Time Training*.
+- **[2026/03/13]** 🎉 We release the paper on [arXiv](https://arxiv.org/abs/2603.12255)!
+- **[2026/03/13]** We release the training and evaluation code for **Spatial-TTT**, the official implementation of *Spatial-TTT: Streaming Visual-based Spatial Intelligence with Test-Time Training*.
 
 
 ## 🌟 Overview
@@ -152,15 +153,13 @@ Spatial-TTT/
 If you find Spatial-TTT useful for your research, please cite:
 
 ```bibtex
-@article{liu2025spatialttt,
+@article{liu2026spatialttt,
   title   = {Spatial-TTT: Streaming Visual-based Spatial Intelligence with Test-Time Training},
   author  = {Liu, Fangfu and Wu, Diankun and Chi, Jiawei and Cai, Yimo and Hung, Yi-Hsin and Yu, Xumin and Li, Hao and Hu, Han and Rao, Yongming and Duan, Yueqi},
-  journal = {arXiv preprint arXiv:XXXX.XXXXX},
-  year    = {2025}
+  journal = {arXiv preprint arXiv:2603.12255},
+  year    = {2026}
 }
 ```
-
-*(Update the arXiv number when available.)*
 
 ## Acknowledgements
 

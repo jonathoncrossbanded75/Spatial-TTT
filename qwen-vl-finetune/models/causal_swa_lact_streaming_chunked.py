@@ -846,3 +846,4 @@ class Qwen3VLLaCTSWIGLULayerStreamingChunked(Qwen3VLLaCTSWIGLULayer):
             lact_cache=lact_cache,
             **kwargs,
         )
+

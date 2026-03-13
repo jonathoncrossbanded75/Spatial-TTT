@@ -118,3 +118,4 @@ def reference_swiglu_ffn_fwd(W0_W2, W1, X):
 
 if __name__ == "__main__":
     pass
+
